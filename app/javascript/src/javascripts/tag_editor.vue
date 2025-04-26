@@ -4,9 +4,7 @@
             <textarea class="tag-textarea" id="post_tag_string" v-model="tags" rows="5" data-autocomplete="tag-edit"
                       ref="otherTags" name="post[tag_string]" :spellcheck="false" @keyup="updateTagCount"></textarea>
         </div>
-        <div v-show="preview.show">
-            <tag-preview :tags="preview.tags" :loading="preview.loading" @close="previewFinalTags"></tag-preview>
-        </div>
+        <tag-preview :tags="preview.tags" :loading="preview.loading"></tag-preview>
         <div class="related-tag-functions">
             Related:
             <a href="#" @click.prevent="findRelated()">Tags</a> |
@@ -118,32 +116,26 @@
         })
       },
       previewFinalTags() {
-        if (this.preview.loading)
-          return;
-        if (this.preview.show) {
-          this.preview.show = false;
-          return;
-        }
+        if (this.preview.loading) return;
+
         this.preview.loading = true;
-        this.preview.show = true;
         this.preview.tags = [];
+
         const self = this;
-        const data = {tags: this.tags};
-        $.ajax("/tags/preview.json", {
-          method: 'POST',
-          type: 'POST',
-          data: data,
-          success: function (result) {
+        const tagList = this.tags.split(' ').join(',');
+
+        $.ajax(`/tags/preview.json?name=${tagList}`, {
+          method: "GET",
+          success(result) {
             self.preview.loading = false;
             self.preview.tags = result;
           },
-          error: function (result) {
+          error(result) {
             self.preview.loading = false;
             self.preview.tags = [];
-            self.preview.show = false;
-            Danbooru.error('Error loading tag preview ' + result);
-          }
-        })
+            Danbooru.error("Error loading tag preview " + JSON.stringify(result));
+          },
+        });
       },
       findRelated(categoryId) {
         const self = this;

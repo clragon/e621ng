@@ -2,7 +2,7 @@
 
 div.related-tags {
   width: 100%;
-  margin-bottom: 1em;
+  margin: 1em 0;
   background: themed("color-section-lighten-5");
   overflow: hidden;
   border-radius: $border-radius-half;
@@ -51,12 +51,12 @@ div.related-tags {
     margin-right: 5px;
     box-sizing: border-box;
 
-    .tag-preview-alias {
-      background-color: rgba(150, 0, 0, 0.25);
+    & .implied {
+      color: themed("palette-text-green");
     }
 
-    .tag-preview-implication {
-      background-color: rgba(0, 150, 0, 0.25);
+    & .empty, .invalid {
+      color: themed("palette-text-red");
     }
   }
 }
