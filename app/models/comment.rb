@@ -14,16 +14,16 @@ class Comment < ApplicationRecord
   validates :body, length: { minimum: 1, maximum: Danbooru.config.comment_max_size }
 
   after_create :update_last_commented_at_on_create
-  after_update(if: ->(rec) { !rec.saved_change_to_is_hidden? && CurrentUser.id != rec.creator_id }) do |rec|
+  after_update(if: ->(rec) { !rec.saved_change_to_is_deleted? && CurrentUser.id != rec.creator_id }) do |rec|
     ModAction.log(:comment_update, { comment_id: rec.id, user_id: rec.creator_id })
   end
   after_destroy :update_last_commented_at_on_destroy
   after_destroy do |rec|
-    ModAction.log(:comment_delete, { comment_id: rec.id, user_id: rec.creator_id })
+    ModAction.log(:comment_destroy, { comment_id: rec.id, user_id: rec.creator_id })
   end
-  after_save :update_last_commented_at_on_destroy, if: ->(rec) { rec.is_hidden? && rec.saved_change_to_is_hidden? }
-  after_save(if: ->(rec) { rec.saved_change_to_is_hidden? && CurrentUser.id != rec.creator_id }) do |rec|
-    action = rec.is_hidden? ? :comment_hide : :comment_unhide
+  after_save :update_last_commented_at_on_destroy, if: ->(rec) { rec.is_deleted? && rec.saved_change_to_is_deleted? }
+  after_save(if: ->(rec) { rec.saved_change_to_is_deleted? && CurrentUser.id != rec.creator_id }) do |rec|
+    action = rec.is_deleted? ? :comment_delete : :comment_undelete
     ModAction.log(action, { comment_id: rec.id, user_id: rec.creator_id })
   end
 
@@ -32,8 +32,8 @@ class Comment < ApplicationRecord
   belongs_to :warning_user, class_name: "User", optional: true
   has_many :votes, class_name: "CommentVote", dependent: :destroy
 
-  scope :deleted, -> { where(is_hidden: true) }
-  scope :undeleted, -> { where(is_hidden: false) }
+  scope :deleted, -> { where(is_deleted: true) }
+  scope :undeleted, -> { where(is_deleted: false) }
   scope :stickied, -> { where(is_sticky: true) }
 
   module SearchMethods
@@ -48,11 +48,11 @@ class Comment < ApplicationRecord
       conditions = []
       arguments = []
 
-      # 1. Visibility: not hidden or created by the user themselves
-      if user.is_anonymous? || !(user.show_hidden_comments? || bypass_user_settings)
-        conditions << "comments.is_hidden = false"
+      # 1. Visibility: not deleted or created by the user themselves
+      if user.is_anonymous? || !(user.show_deleted_comments? || bypass_user_settings)
+        conditions << "comments.is_deleted = false"
       elsif !user.is_staff?
-        conditions << "(comments.is_hidden = false OR comments.creator_id = ?)"
+        conditions << "(comments.is_deleted = false OR comments.creator_id = ?)"
         arguments << user.id
       end
 
@@ -67,7 +67,7 @@ class Comment < ApplicationRecord
         end
       end
 
-      # If no conditions were added (staff with show_hidden_comments? enabled), return unfiltered relation.
+      # If no conditions were added (staff with show_deleted_comments? enabled), return unfiltered relation.
       return all if conditions.empty?
       where(conditions.join(" AND "), *arguments)
     end
@@ -150,7 +150,7 @@ class Comment < ApplicationRecord
         q = q.where("creator_ip_addr <<= ?", params[:ip_addr])
       end
 
-      q = q.attribute_matches(:is_hidden, params[:is_hidden])
+      q = q.attribute_matches(:is_deleted, params[:is_deleted])
       q = q.attribute_matches(:is_sticky, params[:is_sticky])
       q = q.attribute_matches(:do_not_bump_post, params[:do_not_bump_post])
 
@@ -199,11 +199,11 @@ class Comment < ApplicationRecord
 
     # Authorization check: user has permission to see this comment
     def is_accessible?(user = CurrentUser.user, bypass_user_settings: false)
-      # 1. Visibility: not hidden or created by the user themselves
-      if user.is_anonymous? || !(user.show_hidden_comments? || bypass_user_settings)
-        return false if is_hidden?
+      # 1. Visibility: not deleted or created by the user themselves
+      if user.is_anonymous? || !(user.show_deleted_comments? || bypass_user_settings)
+        return false if is_deleted?
       elsif !user.is_staff?
-        return false if is_hidden? && creator_id != user.id
+        return false if is_deleted? && creator_id != user.id
       end
 
       # 2. Disabled posts: non-staff cannot see any comments
@@ -235,7 +235,7 @@ class Comment < ApplicationRecord
       creator_id == user.id
     end
 
-    def can_hide?(user = CurrentUser.user)
+    def can_delete?(user = CurrentUser.user)
       return true if user.is_moderator?
       return false if was_warned? || post&.is_comment_disabled?
       user.id == creator_id
@@ -301,11 +301,11 @@ class Comment < ApplicationRecord
     super + %i[creator_name updater_name]
   end
 
-  def hide!
-    update(is_hidden: true)
+  def delete!
+    update(is_deleted: true)
   end
 
-  def unhide!
-    update(is_hidden: false)
+  def undelete!
+    update(is_deleted: false)
   end
 end

@@ -438,7 +438,7 @@ CREATE TABLE public.comments (
     updater_id integer,
     updater_ip_addr inet,
     do_not_bump_post boolean DEFAULT false NOT NULL,
-    is_hidden boolean DEFAULT false NOT NULL,
+    is_deleted boolean DEFAULT false NOT NULL,
     is_sticky boolean DEFAULT false NOT NULL,
     warning_type integer,
     warning_user_id integer
@@ -3548,13 +3548,6 @@ CREATE INDEX index_artists_on_group_name_trgm ON public.artists USING gin (group
 
 
 --
--- Name: index_artists_on_linked_user_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_artists_on_linked_user_id ON public.artists USING btree (linked_user_id);
-
-
---
 -- Name: index_artists_on_name; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3601,13 +3594,6 @@ CREATE UNIQUE INDEX index_avoid_postings_on_artist_id ON public.avoid_postings U
 --
 
 CREATE INDEX index_avoid_postings_on_creator_id ON public.avoid_postings USING btree (creator_id);
-
-
---
--- Name: index_avoid_postings_on_is_active_and_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_avoid_postings_on_is_active_and_id ON public.avoid_postings USING btree (is_active, id);
 
 
 --
@@ -3695,13 +3681,6 @@ CREATE INDEX index_comment_votes_on_user_id_and_id ON public.comment_votes USING
 
 
 --
--- Name: index_comments_on_created_at_desc; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_comments_on_created_at_desc ON public.comments USING btree (created_at DESC, id DESC);
-
-
---
 -- Name: index_comments_on_creator_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3720,20 +3699,6 @@ CREATE INDEX index_comments_on_creator_id_and_post_id ON public.comments USING b
 --
 
 CREATE INDEX index_comments_on_creator_ip_addr ON public.comments USING btree (creator_ip_addr);
-
-
---
--- Name: index_comments_on_is_hidden; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_comments_on_is_hidden ON public.comments USING btree (id) WHERE (is_hidden = true);
-
-
---
--- Name: index_comments_on_is_sticky; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_comments_on_is_sticky ON public.comments USING btree (id) WHERE (is_sticky = true);
 
 
 --
@@ -3832,13 +3797,6 @@ CREATE INDEX index_edit_histories_on_versionable_id_and_versionable_type ON publ
 --
 
 CREATE INDEX index_exception_logs_on_code ON public.exception_logs USING btree (code);
-
-
---
--- Name: index_exception_logs_on_created_at; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_exception_logs_on_created_at ON public.exception_logs USING btree (created_at);
 
 
 --
@@ -4136,13 +4094,6 @@ CREATE INDEX index_pools_on_name_trgm ON public.pools USING gin (lower((name)::t
 
 
 --
--- Name: index_pools_on_post_ids; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_pools_on_post_ids ON public.pools USING gin (post_ids);
-
-
---
 -- Name: index_pools_on_updated_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4318,13 +4269,6 @@ CREATE INDEX index_posts_on_created_at ON public.posts USING btree (created_at);
 
 
 --
--- Name: index_posts_on_is_comment_disabled; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_posts_on_is_comment_disabled ON public.posts USING btree (id) WHERE (is_comment_disabled = true);
-
-
---
 -- Name: index_posts_on_is_flagged; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4350,13 +4294,6 @@ CREATE UNIQUE INDEX index_posts_on_md5 ON public.posts USING btree (md5);
 --
 
 CREATE INDEX index_posts_on_parent_id ON public.posts USING btree (parent_id);
-
-
---
--- Name: index_posts_on_pool_string_tokens; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_posts_on_pool_string_tokens ON public.posts USING gin (string_to_array(pool_string, ' '::text));
 
 
 --
@@ -4901,6 +4838,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20251101144234'),
 ('20251014151300'),
 ('20251010171207'),
+('20251004000001'),
 ('20251001213309'),
 ('20250921011208'),
 ('20250831040648'),
